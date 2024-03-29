@@ -1,0 +1,15 @@
+{
+  "originHash" : "4825abb9d0b6998fd33a56ae063b4555408e6191b2094fae8028495c7d0fc716",
+  "pins" : [
+    {
+      "identity" : "chartview",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apppear/chartview",
+      "state" : {
+        "revision" : "9115a992c91fa19cbb4f2241084240d38654a1fc",
+        "version" : "1.5.5"
+      }
+    }
+  ],
+  "version" : 3
+}
