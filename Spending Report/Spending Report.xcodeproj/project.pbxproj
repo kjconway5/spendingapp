@@ -12,6 +12,7 @@
 		19D900AB2BB5012A007C7CA6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 19D900AA2BB5012A007C7CA6 /* Assets.xcassets */; };
 		19D900AE2BB5012A007C7CA6 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 19D900AD2BB5012A007C7CA6 /* Preview Assets.xcassets */; };
 		19D900B62BB67BDD007C7CA6 /* SwiftUICharts in Frameworks */ = {isa = PBXBuildFile; productRef = 19D900B52BB67BDD007C7CA6 /* SwiftUICharts */; };
+		19D900B92BB771DD007C7CA6 /* Spending Report Model.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 19D900B72BB771DD007C7CA6 /* Spending Report Model.xcdatamodeld */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,6 +21,7 @@
 		19D900A82BB50127007C7CA6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		19D900AA2BB5012A007C7CA6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		19D900AD2BB5012A007C7CA6 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		19D900B82BB771DD007C7CA6 /* Spending Report Model.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = "Spending Report Model.xcdatamodel"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +57,7 @@
 			children = (
 				19D900A62BB50127007C7CA6 /* Spending_ReportApp.swift */,
 				19D900A82BB50127007C7CA6 /* ContentView.swift */,
+				19D900B72BB771DD007C7CA6 /* Spending Report Model.xcdatamodeld */,
 				19D900AA2BB5012A007C7CA6 /* Assets.xcassets */,
 				19D900AC2BB5012A007C7CA6 /* Preview Content */,
 			);
@@ -145,6 +148,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				19D900B92BB771DD007C7CA6 /* Spending Report Model.xcdatamodeld in Sources */,
 				19D900A92BB50127007C7CA6 /* ContentView.swift in Sources */,
 				19D900A72BB50127007C7CA6 /* Spending_ReportApp.swift in Sources */,
 			);
@@ -371,6 +375,20 @@
 			productName = SwiftUICharts;
 		};
 /* End XCSwiftPackageProductDependency section */
+
+/* Begin XCVersionGroup section */
+		19D900B72BB771DD007C7CA6 /* Spending Report Model.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				19D900B82BB771DD007C7CA6 /* Spending Report Model.xcdatamodel */,
+			);
+			currentVersion = 19D900B82BB771DD007C7CA6 /* Spending Report Model.xcdatamodel */;
+			name = "Spending Report Model.xcdatamodeld";
+			path = "/Users/kye/github/spendingapp/Spending Report/Spending Report/Spending Report Model.xcdatamodeld";
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
 	};
 	rootObject = 19D9009B2BB50127007C7CA6 /* Project object */;
 }
