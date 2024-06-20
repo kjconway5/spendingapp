@@ -83,32 +83,37 @@ struct ContentView: View {
     }
 }
 
-// Page to add what was purchased
-struct Spenditures: View {
-    @EnvironmentObject var expenseStore: ExpenseStore
-    
-    @State private var category = ""
-    @State private var amountString = ""
-    @State private var date = Date()
-    @State private var description = "" // New state variable for description
-    @State private var resetNavigationID = UUID() // Unique identifier to reset navigation view
+class ExpenseViewModel: ObservableObject {
+    @Published var category = ""
+    @Published var amountString = ""
+    @Published var date = Date()
+    @Published var description = ""
+    @Published var resetNavigationID = UUID()
 
-    private var amount: Double {
+    var amount: Double {
         return Double(amountString) ?? 0
     }
 
-    private func addExpense() {
+    func addExpense(to store: ExpenseStore) {
         if !category.isEmpty && amount > 0 {
             let newExpense = ExpenseItem(category: category, amount: amount, date: date, description: description)
-            expenseStore.addExpense(newExpense)
+            store.addExpense(newExpense)
             
             // Clearing fields
             category = ""
             amountString = ""
             description = ""
+            
+            // Reset navigation ID to force view refresh
+            resetNavigationID = UUID()
         }
     }
+}
 
+struct Spenditures: View {
+    @EnvironmentObject var expenseStore: ExpenseStore
+    @StateObject private var viewModel = ExpenseViewModel()
+    
     let categories = ["", "Gas", "Sweet Treats", "Eating Out", "Fun Items", "Video Games", "Gifts", "Necessities", "Groceries", "Experiences"]
 
     var body: some View {
@@ -116,33 +121,59 @@ struct Spenditures: View {
             VStack {
                 Form {
                     Section(header: Text("Expense Group")) {
-                        Picker("Category", selection: $category) {
+                        Picker("Category", selection: $viewModel.category) {
                             ForEach(categories.sorted(), id: \.self) {
                                 Text($0)
                             }
                         }
                     }
                     Section(header: Text("Amount")) {
-                        TextField("$", text: $amountString)
+                        TextField("$", text: $viewModel.amountString)
                             .keyboardType(.decimalPad)
                     }
                     Section(header: Text("Date")) {
-                        DatePicker("Date of Purchase", selection: $date, displayedComponents: .date)
+                        DatePicker("Date of Purchase", selection: $viewModel.date, displayedComponents: .date)
                     }
                     Section(header: Text("Description")) {
-                        TextField("Description", text: $description)
+                        TextField("Description", text: $viewModel.description)
                     }
-                    // List
-                }
-                Button("Add Expense") {
-                    withAnimation {
-                        addExpense()
+                    List {
+                        ForEach(expenseStore.expenses.suffix(5).reversed(), id: \.id) { expense in
+                            if let index = expenseStore.expenses.firstIndex(where: { $0.id == expense.id }) {
+                                NavigationLink(destination: Details(expense: $expenseStore.expenses[index]).environmentObject(expenseStore)) {
+                                    VStack(alignment: .leading, spacing: 5) {
+                                        Text("\(expense.category): $\(String(format: "%.2f", expense.amount)) - \(formattedDate(date: expense.date))")
+                                            .font(.headline)
+                                        if !expense.description.isEmpty {
+                                            Text(expense.description)
+                                                .font(.subheadline)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
+                    .frame(height: 40)
                 }
                 
+                Button("Add Expense") {
+                    withAnimation {
+                        viewModel.addExpense(to: expenseStore)
+                    }
+                }
+                .padding()
             }
+            .frame(height: 750)
+            .id(viewModel.resetNavigationID)
         }
     }
+}
+
+func formattedDate(date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    return formatter.string(from: date)
 }
 
 struct Details: View {
@@ -152,7 +183,6 @@ struct Details: View {
     @State private var date = Date()
     @State private var description = ""
     
-    @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject var expenseStore: ExpenseStore
     
     private var amount: Double {
@@ -166,52 +196,56 @@ struct Details: View {
             expense.date = date
             expense.description = description
             expenseStore.updateExpense(expense)
-            presentationMode.wrappedValue.dismiss()
         }
     }
     
     private func deleteEntry() {
         expenseStore.deleteExpense(expense)
-        presentationMode.wrappedValue.dismiss()
     }
     
     let categories = ["", "Gas", "Sweet Treats", "Eating Out", "Fun Items", "Video Games", "Gifts", "Necessities", "Groceries", "Experiences"]
     
     var body: some View {
-        Form {
-            Section(header: Text("Expense Group")) {
-                Picker("Category", selection: $category) {
-                    ForEach(categories.sorted(), id: \.self) {
-                        Text($0)
+            NavigationView {
+                Form {
+                    Section(header: Text("Expense Group")) {
+                        Picker("Category", selection: $category) {
+                            ForEach(categories.sorted(), id: \.self) {
+                                Text($0)
+                            }
+                        }
+                    }
+
+                    Section(header: Text("Amount")) {
+                        TextField("$$", text: $amountString)
+                            .keyboardType(.decimalPad)
+                    }
+
+                    Section(header: Text("Date")) {
+                        DatePicker("Date of Purchase", selection: $date, displayedComponents: .date)
+                    }
+
+                    Section(header: Text("Description")) {
+                        TextField("Description", text: $description)
                     }
                 }
-            }
-            Section(header: Text("Amount")) {
-                TextField("$", text: $amountString)
-                    .keyboardType(.decimalPad)
-            }
-            Section(header: Text("Date")) {
-                DatePicker("Date of Purchase", selection: $date, displayedComponents: .date)
-            }
-            Section(header: Text("Description")) {
-                TextField("Description", text: $description)
-            }
+                .onAppear {
+                    // Populate fields with existing expense data if available
+                    category = expense.category
+                    amountString = String(expense.amount)
+                    date = expense.date
+                    description = expense.description
+                }
+                .navigationBarItems(trailing: HStack {
+                    Button("Save") {
+                        saveChanges()
+                    }
+                    Button("Delete") {
+                        deleteEntry()
+                    }
+                })
+                .navigationBarTitle("Edit Expense", displayMode: .inline)
         }
-        .onAppear {
-            category = expense.category
-            amountString = String(expense.amount)
-            date = expense.date
-            description = expense.description
-        }
-        .navigationBarItems(trailing: HStack {
-            Button("Save") {
-                saveChanges()
-            }
-            Button("Delete") {
-                deleteEntry()
-            }
-        })
-        .navigationBarTitle("Edit Expense", displayMode: .inline)
     }
 }
 
