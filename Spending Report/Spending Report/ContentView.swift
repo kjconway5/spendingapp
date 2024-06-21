@@ -157,7 +157,6 @@ struct Spenditures: View {
             .foregroundColor(.primary)
             .padding()
         }
-        .frame(height: 640)
         .id(viewModel.resetNavigationID)
         .sheet(isPresented: $isShowingDetails) {
             if let selectedExpense = selectedExpense {
@@ -167,7 +166,6 @@ struct Spenditures: View {
                 }
             }
         }
-
     }
 }
 
@@ -178,7 +176,7 @@ struct ExpenseListItemView: View {
         VStack(alignment: .leading, spacing: 5) {
             Text("\(expense.category): $\(String(format: "%.2f", expense.amount)) - \(formattedDate(date: expense.date))")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             if !expense.description.isEmpty {
                 Text(expense.description)
                     .font(.subheadline)
@@ -188,7 +186,6 @@ struct ExpenseListItemView: View {
         .padding()
     }
 }
-
 
 func formattedDate(date: Date) -> String {
     let formatter = DateFormatter()
@@ -205,14 +202,9 @@ struct Details: View {
     @State private var amountString = ""
     @State private var date = Date()
     @State private var description = ""
-<<<<<<< HEAD
     
     @Environment(\.presentationMode) var presentationMode
-    @EnvironmentObject var expenseStore: ExpenseStore
-    g
-=======
 
->>>>>>> fix-format
     private var amount: Double {
         return Double(amountString) ?? 0
     }
