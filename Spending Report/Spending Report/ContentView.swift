@@ -154,7 +154,7 @@ struct Details: View {
     
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject var expenseStore: ExpenseStore
-    
+    g
     private var amount: Double {
         return Double(amountString) ?? 0
     }
