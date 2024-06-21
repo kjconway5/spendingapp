@@ -158,12 +158,10 @@ struct Spenditures: View {
             .padding()
         }
         .id(viewModel.resetNavigationID)
-        .sheet(isPresented: $isShowingDetails) {
+        .fullScreenCover(isPresented: $isShowingDetails) {
             if let selectedExpense = selectedExpense {
-                NavigationView {
-                    Details(expense: $expenseStore.expenses[expenseStore.expenses.firstIndex(where: { $0.id == selectedExpense.id }) ?? 0], isPresented: $isShowingDetails)
-                        .environmentObject(expenseStore)
-                }
+                Details(expense: $expenseStore.expenses[expenseStore.expenses.firstIndex(where: { $0.id == selectedExpense.id }) ?? 0], isPresented: $isShowingDetails)
+                    .environmentObject(expenseStore)
             }
         }
     }
