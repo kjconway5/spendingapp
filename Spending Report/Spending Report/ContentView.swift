@@ -79,6 +79,7 @@ struct ContentView: View {
     }
 }
 
+// View model for managing expense creation
 class ExpenseViewModel: ObservableObject {
     @Published var category = ""
     @Published var amountString = ""
@@ -106,13 +107,12 @@ class ExpenseViewModel: ObservableObject {
     }
 }
 
+// Spenditures view to display and manage expenses
 struct Spenditures: View {
     @EnvironmentObject var expenseStore: ExpenseStore
     @StateObject private var viewModel = ExpenseViewModel()
     @State private var isShowingDetails = false
     @State private var selectedExpense: ExpenseItem?
-
-    let categories = ["", "Gas", "Sweet Treats", "Eating Out", "Fun Items", "Video Games", "Gifts", "Necessities", "Groceries", "Experiences"]
 
     var body: some View {
         VStack {
@@ -137,8 +137,7 @@ struct Spenditures: View {
                 List {
                     ForEach(expenseStore.expenses.suffix(5).reversed(), id: \.id) { expense in
                         Button(action: {
-                            selectedExpense = expense
-                            isShowingDetails = true
+                            editExpense(expense)
                         }) {
                             ExpenseListItemView(expense: expense)
                         }
@@ -155,19 +154,25 @@ struct Spenditures: View {
             .bold()
             .controlSize(.extraLarge)
             .foregroundColor(.primary)
+            .preferredColorScheme(.dark)
             .padding()
         }
         .id(viewModel.resetNavigationID)
-        .sheet(isPresented: $isShowingDetails) {
-            if let selectedExpense = selectedExpense {
-                Details(expense: $expenseStore.expenses[expenseStore.expenses.firstIndex(where: { $0.id == selectedExpense.id }) ?? 0], isPresented: $isShowingDetails)
-                    .environmentObject(expenseStore)
-                    .background(.black)
-            }
+        .sheet(item: $selectedExpense) { expense in
+            Details(isPresented: $isShowingDetails, expense: expense)
+                .environmentObject(expenseStore)
         }
     }
+
+    private func editExpense(_ expense: ExpenseItem) {
+        selectedExpense = expense
+        isShowingDetails = true
+    }
+
+    let categories = ["", "Gas", "Sweet Treats", "Eating Out", "Fun Items", "Video Games", "Gifts", "Necessities", "Groceries", "Experiences"]
 }
 
+// Expense list item view
 struct ExpenseListItemView: View {
     let expense: ExpenseItem
     
@@ -186,37 +191,97 @@ struct ExpenseListItemView: View {
     }
 }
 
+// Utility function to format date
 func formattedDate(date: Date) -> String {
     let formatter = DateFormatter()
     formatter.dateStyle = .medium
     return formatter.string(from: date)
 }
 
+// Details view for editing an expense
 struct Details: View {
-    @Binding var expense: ExpenseItem
     @EnvironmentObject var expenseStore: ExpenseStore
     @Binding var isPresented: Bool
+    var expense: ExpenseItem
 
-    @State private var category = ""
-    @State private var amountString = ""
-    @State private var date = Date()
-    @State private var description = ""
-    
-    @Environment(\.presentationMode) var presentationMode
+    @State private var editedCategory = ""
+    @State private var editedAmountString = ""
+    @State private var editedDate = Date()
+    @State private var editedDescription = ""
 
     private var amount: Double {
-        return Double(amountString) ?? 0
+        return Double(editedAmountString) ?? 0
+    }
+    var body: some View {
+        NavigationView {
+            VStack {
+                Form {
+                    Section(header: Text("Expense Group")) {
+                        Picker("Category", selection: $editedCategory) {
+                            ForEach(categories.sorted(), id: \.self) {
+                                Text($0)
+                            }
+                        }
+                    }
+
+                    Section(header: Text("Amount")) {
+                        TextField("$", text: $editedAmountString)
+                            .keyboardType(.decimalPad)
+                    }
+
+                    Section(header: Text("Date")) {
+                        DatePicker("Date of Purchase", selection: $editedDate, displayedComponents: .date)
+                    }
+
+                    Section(header: Text("Description")) {
+                        TextField("Description", text: $editedDescription)
+                    }
+                }
+                .onAppear {
+                    // Initialize edited fields with existing expense data
+                    editedCategory = expense.category
+                    editedAmountString = String(expense.amount)
+                    editedDate = expense.date
+                    editedDescription = expense.description
+                }
+                .navigationBarTitle("Edit Expense", displayMode: .inline)
+
+                HStack {
+                    Button("Save") {
+                        saveChanges()
+                    }
+                    .padding()
+                    .bold()
+                    .controlSize(.extraLarge)
+                    .foregroundColor(.primary)
+
+                    Button("Delete") {
+                        deleteEntry()
+                    }
+                    .bold()
+                    .controlSize(.extraLarge)
+                    .padding()
+                    .foregroundColor(.primary)
+                }
+            }
+            .padding()
+            .preferredColorScheme(.dark)
+        }
     }
 
     private func saveChanges() {
-        if !category.isEmpty && amount > 0 {
-            expense.category = category
-            expense.amount = amount
-            expense.date = date
-            expense.description = description
-            expenseStore.updateExpense(expense)
-            isPresented = false // Dismiss the sheet
-        }
+        guard let index = expenseStore.expenses.firstIndex(where: { $0.id == expense.id }) else { return }
+
+        let updatedExpense = ExpenseItem(
+            id: expense.id,
+            category: editedCategory,
+            amount: amount,
+            date: editedDate,
+            description: editedDescription
+        )
+
+        expenseStore.expenses[index] = updatedExpense
+        isPresented = false // Dismiss the sheet
     }
 
     private func deleteEntry() {
@@ -225,62 +290,9 @@ struct Details: View {
     }
 
     let categories = ["", "Gas", "Sweet Treats", "Eating Out", "Fun Items", "Video Games", "Gifts", "Necessities", "Groceries", "Experiences"]
-
-    var body: some View {
-        VStack {
-            Form {
-                Section(header: Text("Expense Group")) {
-                    Picker("Category", selection: $category) {
-                        ForEach(categories.sorted(), id: \.self) {
-                            Text($0)
-                        }
-                    }
-                }
-
-                Section(header: Text("Amount")) {
-                    TextField("$", text: $amountString)
-                        .keyboardType(.decimalPad)
-                }
-
-                Section(header: Text("Date")) {
-                    DatePicker("Date of Purchase", selection: $date, displayedComponents: .date)
-                }
-
-                Section(header: Text("Description")) {
-                    TextField("Description", text: $description)
-                }
-            }
-            .onAppear {
-                // Populate fields with existing expense data if available
-                category = expense.category
-                amountString = String(expense.amount)
-                date = expense.date
-                description = expense.description
-            }
-            .navigationBarTitle("Edit Expense", displayMode: .inline)
-
-            HStack {
-                Button("Save") {
-                    saveChanges()
-                }
-                .padding()
-                .bold()
-                .controlSize(.extraLarge)
-                .foregroundColor(.primary)
-
-                Button("Delete") {
-                    deleteEntry()
-                }
-                .bold()
-                .controlSize(.extraLarge)
-                .padding()
-                .foregroundColor(.primary)
-            }
-        }
-        .padding()
-    }
 }
 
+// Placeholder views for other tabs
 struct Budget: View {
     var body: some View {
         Text("Budget")
@@ -293,6 +305,7 @@ struct Holder: View {
     }
 }
 
+// Preview
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
