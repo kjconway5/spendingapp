@@ -39,6 +39,33 @@ class ExpenseStore: ObservableObject {
     }
 }
 
+// Expense list item view
+struct ExpenseListItemView: View {
+    let expense: ExpenseItem
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("\(expense.category): $\(String(format: "%.2f", expense.amount)) - \(formattedDate(date: expense.date))")
+                .font(.headline)
+                .foregroundColor(.primary)
+            if !expense.description.isEmpty {
+                Text(expense.description)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+    }
+}
+
+// Utility function to format date
+func formattedDate(date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    return formatter.string(from: date)
+}
+
+
 // Opening page
 struct ContentView: View {
     @StateObject var expenseStore = ExpenseStore() // Initialize expense store
@@ -60,17 +87,17 @@ struct ContentView: View {
                         .navigationBarTitle("Budget")
                 }
                 .tabItem {
-                    Image(systemName: "dollarsign.circle.fill")
+                    Image(systemName: "dollarsign")
                     Text("Budget")
                 }
                 
                 NavigationView {
-                    Holder()
-                        .navigationBarTitle("Holder")
+                    Temp()
+                        .navigationBarTitle("Temp")
                 }
                 .tabItem {
-                    Image(systemName: "person.circle")
-                    Text("Holder")
+                    Image(systemName: "person")
+                    Text("Temp")
                 }
             }
             .navigationBarHidden(true)
@@ -113,7 +140,14 @@ struct Spenditures: View {
     @StateObject private var viewModel = ExpenseViewModel()
     @State private var isShowingDetails = false
     @State private var selectedExpense: ExpenseItem?
-
+    
+    private func editExpense(_ expense: ExpenseItem) {
+        selectedExpense = expense
+        isShowingDetails = true
+    }
+    
+    let categories = ["", "Gas", "Sweet Treats", "Eating Out", "Fun Items", "Video Games", "Gifts", "Necessities", "Groceries", "Experiences"]
+    
     var body: some View {
         VStack {
             Form {
@@ -159,49 +193,16 @@ struct Spenditures: View {
         }
         .id(viewModel.resetNavigationID)
         .sheet(item: $selectedExpense) { expense in
-            Details(isPresented: $isShowingDetails, expense: expense)
+            Details(isPresented: $selectedExpense, expense: expense)
                 .environmentObject(expenseStore)
         }
     }
-
-    private func editExpense(_ expense: ExpenseItem) {
-        selectedExpense = expense
-        isShowingDetails = true
-    }
-
-    let categories = ["", "Gas", "Sweet Treats", "Eating Out", "Fun Items", "Video Games", "Gifts", "Necessities", "Groceries", "Experiences"]
-}
-
-// Expense list item view
-struct ExpenseListItemView: View {
-    let expense: ExpenseItem
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text("\(expense.category): $\(String(format: "%.2f", expense.amount)) - \(formattedDate(date: expense.date))")
-                .font(.headline)
-                .foregroundColor(.primary)
-            if !expense.description.isEmpty {
-                Text(expense.description)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding()
-    }
-}
-
-// Utility function to format date
-func formattedDate(date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .medium
-    return formatter.string(from: date)
 }
 
 // Details view for editing an expense
 struct Details: View {
     @EnvironmentObject var expenseStore: ExpenseStore
-    @Binding var isPresented: Bool
+    @Binding var isPresented: ExpenseItem?
     var expense: ExpenseItem
 
     @State private var editedCategory = ""
@@ -212,6 +213,29 @@ struct Details: View {
     private var amount: Double {
         return Double(editedAmountString) ?? 0
     }
+    
+    private func saveChanges() {
+        guard let index = expenseStore.expenses.firstIndex(where: { $0.id == expense.id }) else { return }
+
+        let updatedExpense = ExpenseItem(
+            id: expense.id,
+            category: editedCategory,
+            amount: amount,
+            date: editedDate,
+            description: editedDescription
+        )
+
+        expenseStore.expenses[index] = updatedExpense
+        isPresented = nil // Dismiss the sheet
+    }
+
+    private func deleteEntry() {
+        expenseStore.deleteExpense(expense)
+        isPresented = nil // Dismiss the sheet
+    }
+
+    let categories = ["", "Gas", "Sweet Treats", "Eating Out", "Fun Items", "Video Games", "Gifts", "Necessities", "Groceries", "Experiences"]
+    
     var body: some View {
         NavigationView {
             VStack {
@@ -268,28 +292,6 @@ struct Details: View {
             .preferredColorScheme(.dark)
         }
     }
-
-    private func saveChanges() {
-        guard let index = expenseStore.expenses.firstIndex(where: { $0.id == expense.id }) else { return }
-
-        let updatedExpense = ExpenseItem(
-            id: expense.id,
-            category: editedCategory,
-            amount: amount,
-            date: editedDate,
-            description: editedDescription
-        )
-
-        expenseStore.expenses[index] = updatedExpense
-        isPresented = false // Dismiss the sheet
-    }
-
-    private func deleteEntry() {
-        expenseStore.deleteExpense(expense)
-        isPresented = false // Dismiss the sheet
-    }
-
-    let categories = ["", "Gas", "Sweet Treats", "Eating Out", "Fun Items", "Video Games", "Gifts", "Necessities", "Groceries", "Experiences"]
 }
 
 // Placeholder views for other tabs
@@ -299,9 +301,9 @@ struct Budget: View {
     }
 }
 
-struct Holder: View {
+struct Temp: View {
     var body: some View {
-        Text("Holder")
+        Text("Temp")
     }
 }
 
