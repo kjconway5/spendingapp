@@ -10,7 +10,7 @@ import SwiftUI
 struct ExpenseItem: Identifiable, Codable {
     var id = UUID()
     var category: String
-    var amount: Double
+    var amount: Float
     var date: Date
     var description: String
 }
@@ -81,7 +81,6 @@ struct ContentView: View {
                     Image(systemName: "list.bullet")
                     Text("Spenditures")
                 }
-                
                 NavigationView {
                     Budget()
                         .navigationBarTitle("Budget")
@@ -90,7 +89,6 @@ struct ContentView: View {
                     Image(systemName: "dollarsign")
                     Text("Budget")
                 }
-                
                 NavigationView {
                     Temp()
                         .navigationBarTitle("Temp")
@@ -114,8 +112,8 @@ class ExpenseViewModel: ObservableObject {
     @Published var description = ""
     @Published var resetNavigationID = UUID()
 
-    var amount: Double {
-        return Double(amountString) ?? 0
+    var amount: Float {
+        return Float(amountString) ?? 0.0
     }
 
     func addExpense(to store: ExpenseStore) {
@@ -151,7 +149,7 @@ struct Spenditures: View {
     var body: some View {
         VStack {
             Form {
-                Section(header: Text("Expense Group")) {
+                Section(header: Text("Group")) {
                     Picker("Category", selection: $viewModel.category) {
                         ForEach(categories.sorted(), id: \.self) {
                             Text($0)
@@ -210,8 +208,8 @@ struct Details: View {
     @State private var editedDate = Date()
     @State private var editedDescription = ""
 
-    private var amount: Double {
-        return Double(editedAmountString) ?? 0
+    private var amount: Float {
+        return Float(editedAmountString) ?? 0
     }
     
     private func saveChanges() {
@@ -240,7 +238,7 @@ struct Details: View {
         NavigationView {
             VStack {
                 Form {
-                    Section(header: Text("Expense Group")) {
+                    Section(header: Text("Group")) {
                         Picker("Category", selection: $editedCategory) {
                             ForEach(categories.sorted(), id: \.self) {
                                 Text($0)
