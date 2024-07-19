@@ -39,6 +39,44 @@ class ExpenseStore: ObservableObject {
     }
 }
 
+// Global budget store to manage the monthly budget
+class BudgetStore: ObservableObject {
+    @Published var totalBudget: Float = 0
+    @Published var remainingBudget: Float = 0
+    
+    init() {
+        // Reset budget at the start of the month
+        resetMonthlyBudget()
+    }
+    
+    // Function to set the monthly budget
+    func setMonthlyBudget(_ amount: Float) {
+        totalBudget = amount
+        remainingBudget = amount
+    }
+    
+    // Function to reset the budget at the start of each month
+    func resetMonthlyBudget() {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month], from: Date())
+        if let firstDayOfMonth = calendar.date(from: components) {
+            let nextMonth = calendar.date(byAdding: .month, value: 1, to: firstDayOfMonth)!
+            let timer = Timer(fireAt: nextMonth, interval: 0, target: self, selector: #selector(resetBudget), userInfo: nil, repeats: false)
+            RunLoop.main.add(timer, forMode: .default)
+        }
+    }
+    
+    @objc private func resetBudget() {
+        remainingBudget = totalBudget
+        resetMonthlyBudget() // Schedule the next reset
+    }
+    
+    // Function to subtract expense from the budget
+    func subtractExpense(_ amount: Float) {
+        remainingBudget -= amount
+    }
+}
+
 // Expense list item view
 struct ExpenseListItemView: View {
     let expense: ExpenseItem
@@ -65,10 +103,10 @@ func formattedDate(date: Date) -> String {
     return formatter.string(from: date)
 }
 
-
 // Opening page
 struct ContentView: View {
     @StateObject var expenseStore = ExpenseStore() // Initialize expense store
+    @StateObject var budgetStore = BudgetStore()   // Initialize budget store
     
     var body: some View {
         NavigationView {
@@ -101,6 +139,7 @@ struct ContentView: View {
             .navigationBarHidden(true)
         }
         .environmentObject(expenseStore)
+        .environmentObject(budgetStore)
     }
 }
 
@@ -111,15 +150,16 @@ class ExpenseViewModel: ObservableObject {
     @Published var date = Date()
     @Published var description = ""
     @Published var resetNavigationID = UUID()
-
+    
     var amount: Float {
         return Float(amountString) ?? 0.0
     }
-
-    func addExpense(to store: ExpenseStore) {
+    
+    func addExpense(to store: ExpenseStore, budgetStore: BudgetStore) {
         if !category.isEmpty && amount > 0 {
             let newExpense = ExpenseItem(category: category, amount: amount, date: date, description: description)
             store.addExpense(newExpense)
+            budgetStore.subtractExpense(amount) // Ensure expense is subtracted from budget
             
             // Clearing fields
             category = ""
@@ -135,6 +175,7 @@ class ExpenseViewModel: ObservableObject {
 // Spenditures view to display and manage expenses
 struct Spenditures: View {
     @EnvironmentObject var expenseStore: ExpenseStore
+    @EnvironmentObject var budgetStore: BudgetStore
     @StateObject private var viewModel = ExpenseViewModel()
     @State private var isShowingDetails = false
     @State private var selectedExpense: ExpenseItem?
@@ -180,7 +221,7 @@ struct Spenditures: View {
             
             Button("Add Expense") {
                 withAnimation {
-                    viewModel.addExpense(to: expenseStore)
+                    viewModel.addExpense(to: expenseStore, budgetStore: budgetStore)
                 }
             }
             .bold()
@@ -193,6 +234,7 @@ struct Spenditures: View {
         .sheet(item: $selectedExpense) { expense in
             Details(isPresented: $selectedExpense, expense: expense)
                 .environmentObject(expenseStore)
+                .environmentObject(budgetStore)
         }
     }
 }
@@ -200,21 +242,22 @@ struct Spenditures: View {
 // Details view for editing an expense
 struct Details: View {
     @EnvironmentObject var expenseStore: ExpenseStore
+    @EnvironmentObject var budgetStore: BudgetStore
     @Binding var isPresented: ExpenseItem?
     var expense: ExpenseItem
-
+    
     @State private var editedCategory = ""
     @State private var editedAmountString = ""
     @State private var editedDate = Date()
     @State private var editedDescription = ""
-
+    
     private var amount: Float {
         return Float(editedAmountString) ?? 0
     }
     
     private func saveChanges() {
         guard let index = expenseStore.expenses.firstIndex(where: { $0.id == expense.id }) else { return }
-
+        
         let updatedExpense = ExpenseItem(
             id: expense.id,
             category: editedCategory,
@@ -222,16 +265,16 @@ struct Details: View {
             date: editedDate,
             description: editedDescription
         )
-
+        
         expenseStore.expenses[index] = updatedExpense
         isPresented = nil // Dismiss the sheet
     }
-
+    
     private func deleteEntry() {
         expenseStore.deleteExpense(expense)
         isPresented = nil // Dismiss the sheet
     }
-
+    
     let categories = ["", "Gas", "Sweet Treats", "Eating Out", "Fun Items", "Video Games", "Gifts", "Necessities", "Groceries", "Experiences"]
     
     var body: some View {
@@ -245,16 +288,16 @@ struct Details: View {
                             }
                         }
                     }
-
+                    
                     Section(header: Text("Amount")) {
                         TextField("$", text: $editedAmountString)
                             .keyboardType(.decimalPad)
                     }
-
+                    
                     Section(header: Text("Date")) {
                         DatePicker("Date of Purchase", selection: $editedDate, displayedComponents: .date)
                     }
-
+                    
                     Section(header: Text("Description")) {
                         TextField("Description", text: $editedDescription)
                     }
@@ -267,7 +310,7 @@ struct Details: View {
                     editedDescription = expense.description
                 }
                 .navigationBarTitle("Edit Expense", displayMode: .inline)
-
+                
                 HStack {
                     Button("Save") {
                         saveChanges()
@@ -276,7 +319,7 @@ struct Details: View {
                     .bold()
                     .controlSize(.extraLarge)
                     .foregroundColor(.primary)
-
+                    
                     Button("Delete") {
                         deleteEntry()
                     }
@@ -294,8 +337,29 @@ struct Details: View {
 
 // Placeholder views for other tabs
 struct Budget: View {
+    @EnvironmentObject var budgetStore: BudgetStore
+    @State private var budgetString = ""
+    
     var body: some View {
-        Text("Budget")
+        VStack {
+            Form {
+                Section(header: Text("Set Monthly Budget")) {
+                    TextField("$", text: $budgetString)
+                        .keyboardType(.decimalPad)
+                    
+                    Button("Set Budget") {
+                        if let budget = Float(budgetString) {
+                            budgetStore.setMonthlyBudget(budget)
+                        }
+                    }
+                }
+                
+                Section(header: Text("Current Budget")) {
+                    Text("Total Budget: $\(String(format: "%.2f", budgetStore.totalBudget))")
+                    Text("Remaining Budget: $\(String(format: "%.2f", budgetStore.remainingBudget))")
+                }
+            }
+        }
     }
 }
 
@@ -310,6 +374,7 @@ struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
             .environmentObject(ExpenseStore())
+            .environmentObject(BudgetStore())
             .preferredColorScheme(.dark)
     }
 }
