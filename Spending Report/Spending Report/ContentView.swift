@@ -104,6 +104,13 @@ func formattedDate(date: Date) -> String {
     return formatter.string(from: date)
 }
 
+// Utility function to get current month
+func currentMonth() -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "MMMM"
+    return formatter.string(from: Date())
+}
+
 // Opening page
 struct ContentView: View {
     @StateObject var expenseStore = ExpenseStore() // Initialize expense store
@@ -122,7 +129,7 @@ struct ContentView: View {
                 }
                 NavigationView {
                     Budget()
-                        .navigationBarTitle("Budget -")
+                        .navigationBarTitle("Budget - \(currentMonth())")
                 }
                 .tabItem {
                     Image(systemName: "dollarsign")
@@ -378,8 +385,10 @@ struct Budget: View {
                             changeBudget.toggle()
                         }
                     }
+                    
                     if budgetStore.totalBudget != budgetStore.remainingBudget {
                         SectorChartExample()
+                            .frame(height: 225)
                         
                         Section(header: Text("Breakdown by Group")) {
                             Picker("Category", selection: $selectedCategory) {
@@ -387,6 +396,7 @@ struct Budget: View {
                                     Text($0)
                                 }
                             }
+                            
                             if !selectedCategory.isEmpty {
                                 Text("Total for \(selectedCategory): $\(String(format: "%.2f", selectedCategoryTotal))")
                             }
