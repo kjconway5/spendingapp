@@ -5,6 +5,7 @@
 //  Created by Kye Conway on 3/27/24.
 
 import SwiftUI
+import Charts
 
 // Structure to hold expense information
 struct ExpenseItem: Identifiable, Codable {
@@ -121,7 +122,7 @@ struct ContentView: View {
                 }
                 NavigationView {
                     Budget()
-                        .navigationBarTitle("Budget")
+                        .navigationBarTitle("Budget -")
                 }
                 .tabItem {
                     Image(systemName: "dollarsign")
@@ -338,31 +339,92 @@ struct Details: View {
 // Placeholder views for other tabs
 struct Budget: View {
     @EnvironmentObject var budgetStore: BudgetStore
+    @EnvironmentObject var expenseStore: ExpenseStore
     @State private var budgetString = ""
+    @State private var changeBudget = false
+    @State private var selectedCategory: String = ""
     
+    private var categories: [String] {
+        return Array(Set(expenseStore.expenses.map { $0.category })).sorted()
+    }
+    
+    private var selectedCategoryTotal: Float {
+        return expenseStore.expenses
+            .filter { $0.category == selectedCategory }
+            .reduce(0) { $0 + $1.amount }
+        }
+
     var body: some View {
         VStack {
             Form {
-                Section(header: Text("Set Monthly Budget")) {
-                    TextField("$", text: $budgetString)
-                        .keyboardType(.decimalPad)
-                    
-                    Button("Set Budget") {
-                        if let budget = Float(budgetString) {
-                            budgetStore.setMonthlyBudget(budget)
+                if budgetStore.totalBudget == 0 || changeBudget {
+                    Section(header: Text("Set Monthly Budget")) {
+                        TextField("Enter budget", text: $budgetString)
+                            .keyboardType(.decimalPad)
+                        
+                        Button("Set Budget") {
+                            if let budget = Float(budgetString) {
+                                budgetStore.setMonthlyBudget(budget)
+                                budgetString = ""  // Clear the text field after setting the budget
+                                changeBudget = false
+                            }
                         }
                     }
-                }
-                
-                Section(header: Text("Current Budget")) {
-                    Text("Total Budget: $\(String(format: "%.2f", budgetStore.totalBudget))")
-                    Text("Remaining Budget: $\(String(format: "%.2f", budgetStore.remainingBudget))")
+                } else {
+                    Section(header: Text("Current Monthly Budget")) {
+                        Text("Total Budget: $\(String(format: "%.2f", budgetStore.totalBudget))")
+                        Text("Remaining Budget: $\(String(format: "%.2f", budgetStore.remainingBudget))")
+                        Button("Change Budget") {
+                            changeBudget.toggle()
+                        }
+                    }
+                    if budgetStore.totalBudget != budgetStore.remainingBudget {
+                        SectorChartExample()
+                        
+                        Section(header: Text("Breakdown by Group")) {
+                            Picker("Category", selection: $selectedCategory) {
+                                ForEach(categories, id: \.self) {
+                                    Text($0)
+                                }
+                            }
+                            if !selectedCategory.isEmpty {
+                                Text("Total for \(selectedCategory): $\(String(format: "%.2f", selectedCategoryTotal))")
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
+struct SectorChartExample: View {
+    @EnvironmentObject var expenseStore: ExpenseStore
+    
+    struct ExpenseCategory: Identifiable {
+        let id = UUID()
+        let category: String
+        let total: Float
+    }
+    
+    var aggregatedExpenses: [ExpenseCategory] {
+        let grouped = Dictionary(grouping: expenseStore.expenses, by: { $0.category })
+        return grouped.map { category, expenses in
+            ExpenseCategory(category: category, total: expenses.reduce(0) { $0 + $1.amount })
+        }
+    }
+    
+    var body: some View {
+        Chart(aggregatedExpenses) { expenseCategory in
+            SectorMark(
+                angle: .value(expenseCategory.category, expenseCategory.total),
+                innerRadius: .ratio(0.6),
+                angularInset: 8
+            )
+            .foregroundStyle(by: .value("Category", expenseCategory.category))
+        }
+    }
+}
 struct Temp: View {
     var body: some View {
         Text("Temp")
