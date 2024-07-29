@@ -73,8 +73,14 @@ class BudgetStore: ObservableObject {
     }
     
     // Function to subtract expense from the budget
-    func subtractExpense(_ amount: Float) {
-        remainingBudget -= amount
+    func subtractExpense(_ amount: Float, date: Date) {
+        let calendar = Calendar.current
+        let currentComponents = calendar.dateComponents([.year, .month], from: Date())
+        let expenseComponents = calendar.dateComponents([.year, .month], from: date)
+        
+        if currentComponents.year == expenseComponents.year && currentComponents.month == expenseComponents.month {
+            remainingBudget -= amount
+        }
     }
 }
 
@@ -167,7 +173,7 @@ class ExpenseViewModel: ObservableObject {
         if !category.isEmpty && amount > 0 {
             let newExpense = ExpenseItem(category: category, amount: amount, date: date, description: description)
             store.addExpense(newExpense)
-            budgetStore.subtractExpense(amount) // Ensure expense is subtracted from budget
+            budgetStore.subtractExpense(amount, date: date) // Ensure expense is subtracted from budget if within the current month
             
             // Clearing fields
             category = ""
