@@ -8,7 +8,7 @@ import SwiftUI
 import Charts
 
 // Structure to hold expense information
-struct ExpenseItem: Identifiable, Codable {
+struct ExpenseItemStruct: Identifiable, Codable {
     var id = UUID()
     var category: String
     var amount: Float
@@ -18,22 +18,22 @@ struct ExpenseItem: Identifiable, Codable {
 
 // Global expense store to manage expenses
 class ExpenseStore: ObservableObject {
-    @Published var expenses = [ExpenseItem]()
+    @Published var expenses = [ExpenseItemStruct]()
     
     // Function to add an expense
-    func addExpense(_ expense: ExpenseItem) {
+    func addExpense(_ expense: ExpenseItemStruct) {
         expenses.append(expense)
     }
     
     // Function to update an expense
-    func updateExpense(_ expense: ExpenseItem) {
+    func updateExpense(_ expense: ExpenseItemStruct) {
         if let index = expenses.firstIndex(where: { $0.id == expense.id }) {
             expenses[index] = expense
         }
     }
     
     // Function to delete an expense
-    func deleteExpense(_ expense: ExpenseItem) {
+    func deleteExpense(_ expense: ExpenseItemStruct) {
         if let index = expenses.firstIndex(where: { $0.id == expense.id }) {
             expenses.remove(at: index)
         }
@@ -86,7 +86,7 @@ class BudgetStore: ObservableObject {
 
 // Expense list item view
 struct ExpenseListItemView: View {
-    let expense: ExpenseItem
+    let expense: ExpenseItemStruct
     
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -171,7 +171,7 @@ class ExpenseViewModel: ObservableObject {
     
     func addExpense(to store: ExpenseStore, budgetStore: BudgetStore) {
         if !category.isEmpty && amount > 0 {
-            let newExpense = ExpenseItem(category: category, amount: amount, date: date, description: description)
+            let newExpense = ExpenseItemStruct(category: category, amount: amount, date: date, description: description)
             store.addExpense(newExpense)
             budgetStore.subtractExpense(amount, date: date) // Ensure expense is subtracted from budget if within the current month
             
@@ -192,15 +192,15 @@ struct Spenditures: View {
     @EnvironmentObject var budgetStore: BudgetStore
     @StateObject private var viewModel = ExpenseViewModel()
     @State private var isShowingDetails = false
-    @State private var selectedExpense: ExpenseItem?
-    
-    private func editExpense(_ expense: ExpenseItem) {
+    @State private var selectedExpense: ExpenseItemStruct? = nil
+
+    private func editExpense(_ expense: ExpenseItemStruct) {
         selectedExpense = expense
         isShowingDetails = true
     }
-    
+
     let categories = ["", "Gas", "Sweet Treats", "Eating Out", "Fun Items", "Video Games", "Gifts", "Necessities", "Groceries", "Experiences"]
-    
+
     var body: some View {
         VStack {
             Form {
@@ -232,7 +232,7 @@ struct Spenditures: View {
                 }
                 .frame(height: 40)
             }
-            
+
             Button("Add Expense") {
                 withAnimation {
                     viewModel.addExpense(to: expenseStore, budgetStore: budgetStore)
@@ -257,40 +257,40 @@ struct Spenditures: View {
 struct Details: View {
     @EnvironmentObject var expenseStore: ExpenseStore
     @EnvironmentObject var budgetStore: BudgetStore
-    @Binding var isPresented: ExpenseItem?
-    var expense: ExpenseItem
-    
+    @Binding var isPresented: ExpenseItemStruct?
+    var expense: ExpenseItemStruct
+
     @State private var editedCategory = ""
     @State private var editedAmountString = ""
     @State private var editedDate = Date()
     @State private var editedDescription = ""
-    
+
     private var amount: Float {
         return Float(editedAmountString) ?? 0
     }
-    
+
     private func saveChanges() {
         guard let index = expenseStore.expenses.firstIndex(where: { $0.id == expense.id }) else { return }
-        
-        let updatedExpense = ExpenseItem(
+
+        let updatedExpense = ExpenseItemStruct(
             id: expense.id,
             category: editedCategory,
             amount: amount,
             date: editedDate,
             description: editedDescription
         )
-        
+
         expenseStore.expenses[index] = updatedExpense
         isPresented = nil // Dismiss the sheet
     }
-    
+
     private func deleteEntry() {
         expenseStore.deleteExpense(expense)
         isPresented = nil // Dismiss the sheet
     }
-    
+
     let categories = ["", "Gas", "Sweet Treats", "Eating Out", "Fun Items", "Video Games", "Gifts", "Necessities", "Groceries", "Experiences"]
-    
+
     var body: some View {
         NavigationView {
             VStack {
@@ -302,16 +302,16 @@ struct Details: View {
                             }
                         }
                     }
-                    
+
                     Section(header: Text("Amount")) {
                         TextField("$", text: $editedAmountString)
                             .keyboardType(.decimalPad)
                     }
-                    
+
                     Section(header: Text("Date")) {
                         DatePicker("Date of Purchase", selection: $editedDate, displayedComponents: .date)
                     }
-                    
+
                     Section(header: Text("Description")) {
                         TextField("Description", text: $editedDescription)
                     }
@@ -324,7 +324,7 @@ struct Details: View {
                     editedDescription = expense.description
                 }
                 .navigationBarTitle("Edit Expense", displayMode: .inline)
-                
+
                 HStack {
                     Button("Save") {
                         saveChanges()
@@ -333,7 +333,7 @@ struct Details: View {
                     .bold()
                     .controlSize(.extraLarge)
                     .foregroundColor(.primary)
-                    
+
                     Button("Delete") {
                         deleteEntry()
                     }
@@ -348,6 +348,7 @@ struct Details: View {
         }
     }
 }
+
 
 // Placeholder views for other tabs
 struct Budget: View {
