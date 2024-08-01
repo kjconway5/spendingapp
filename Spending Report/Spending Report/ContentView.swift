@@ -14,21 +14,36 @@ struct ExpenseItemStruct: Identifiable, Codable {
     var amount: Float
     var date: Date
     var description: String
+    
+    init(id: UUID = UUID(), category: String, amount: Float, description: String, date: Date) {
+            self.id = id
+            self.category = category
+            self.amount = amount
+            self.description = description
+            self.date = date
+        }
 }
 
 // Global expense store to manage expenses
 class ExpenseStore: ObservableObject {
     @Published var expenses = [ExpenseItemStruct]()
+    private let fileName = "expenses.json"
+    
+    init() {
+        loadExpenses()
+    }
     
     // Function to add an expense
     func addExpense(_ expense: ExpenseItemStruct) {
         expenses.append(expense)
+        saveExpenses()
     }
     
     // Function to update an expense
     func updateExpense(_ expense: ExpenseItemStruct) {
         if let index = expenses.firstIndex(where: { $0.id == expense.id }) {
             expenses[index] = expense
+            saveExpenses()
         }
     }
     
@@ -36,7 +51,28 @@ class ExpenseStore: ObservableObject {
     func deleteExpense(_ expense: ExpenseItemStruct) {
         if let index = expenses.firstIndex(where: { $0.id == expense.id }) {
             expenses.remove(at: index)
+            saveExpenses()
         }
+    }
+
+    private func saveExpenses() {
+        if let data = try? JSONEncoder().encode(expenses) {
+            let url = getDocumentsDirectory().appendingPathComponent(fileName)
+            try? data.write(to: url)
+        }
+    }
+
+    private func loadExpenses() {
+        let url = getDocumentsDirectory().appendingPathComponent(fileName)
+        if let data = try? Data(contentsOf: url) {
+            if let decodedExpenses = try? JSONDecoder().decode([ExpenseItemStruct].self, from: data) {
+                expenses = decodedExpenses
+            }
+        }
+    }
+
+    private func getDocumentsDirectory() -> URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 }
 
@@ -44,9 +80,10 @@ class ExpenseStore: ObservableObject {
 class BudgetStore: ObservableObject {
     @Published var totalBudget: Float = 0
     @Published var remainingBudget: Float = 0
+    private let fileName = "budget.json"
     
     init() {
-        // Reset budget at the start of the month
+        loadBudget()
         resetMonthlyBudget()
     }
     
@@ -54,6 +91,7 @@ class BudgetStore: ObservableObject {
     func setMonthlyBudget(_ amount: Float) {
         totalBudget = amount
         remainingBudget = amount
+        saveBudget()
     }
     
     // Function to reset the budget at the start of each month
@@ -69,6 +107,7 @@ class BudgetStore: ObservableObject {
     
     @objc private func resetBudget() {
         remainingBudget = totalBudget
+        saveBudget()
         resetMonthlyBudget() // Schedule the next reset
     }
     
@@ -80,7 +119,35 @@ class BudgetStore: ObservableObject {
         
         if currentComponents.year == expenseComponents.year && currentComponents.month == expenseComponents.month {
             remainingBudget -= amount
+            saveBudget()
         }
+    }
+
+    private func saveBudget() {
+        let budgetData = BudgetData(totalBudget: totalBudget, remainingBudget: remainingBudget)
+        if let data = try? JSONEncoder().encode(budgetData) {
+            let url = getDocumentsDirectory().appendingPathComponent(fileName)
+            try? data.write(to: url)
+        }
+    }
+
+    private func loadBudget() {
+        let url = getDocumentsDirectory().appendingPathComponent(fileName)
+        if let data = try? Data(contentsOf: url) {
+            if let decodedBudget = try? JSONDecoder().decode(BudgetData.self, from: data) {
+                totalBudget = decodedBudget.totalBudget
+                remainingBudget = decodedBudget.remainingBudget
+            }
+        }
+    }
+
+    private func getDocumentsDirectory() -> URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    }
+
+    private struct BudgetData: Codable {
+        let totalBudget: Float
+        let remainingBudget: Float
     }
 }
 
@@ -171,7 +238,7 @@ class ExpenseViewModel: ObservableObject {
     
     func addExpense(to store: ExpenseStore, budgetStore: BudgetStore) {
         if !category.isEmpty && amount > 0 {
-            let newExpense = ExpenseItemStruct(category: category, amount: amount, date: date, description: description)
+            let newExpense = ExpenseItemStruct(category: category, amount: amount, description: description, date: date)
             store.addExpense(newExpense)
             budgetStore.subtractExpense(amount, date: date) // Ensure expense is subtracted from budget if within the current month
             
@@ -276,8 +343,9 @@ struct Details: View {
             id: expense.id,
             category: editedCategory,
             amount: amount,
-            date: editedDate,
-            description: editedDescription
+            description: editedDescription,
+            date: editedDate
+            
         )
 
         expenseStore.expenses[index] = updatedExpense
@@ -348,7 +416,6 @@ struct Details: View {
         }
     }
 }
-
 
 // Placeholder views for other tabs
 struct Budget: View {

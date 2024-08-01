@@ -9,10 +9,14 @@ import SwiftUI
 
 @main
 struct Spending_ReportApp: App {
+    @StateObject private var expenseStore = ExpenseStore()
+    @StateObject private var budgetStore = BudgetStore()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .preferredColorScheme(.dark) // Set preferred color scheme to dark mode
+                .environmentObject(expenseStore)
+                .environmentObject(budgetStore)
         }
     }
 }
